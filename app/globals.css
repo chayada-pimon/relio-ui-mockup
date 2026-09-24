@@ -4,126 +4,186 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* RELIO Design System v2.0 — tokens from RELIO-DESIGN.md §18.1 / §11 */
+
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: var(--font-sans);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
+  --font-sans: var(--font-bai-jamjuree), "Noto Sans Thai", Arial, ui-sans-serif,
+    system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  /* RELIO semantic colours */
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-raised: var(--bg-raised);
+  --color-hover: var(--bg-hover);
+  --color-content: var(--text-primary);
+  --color-content-secondary: var(--text-secondary);
+  --color-content-quiet: var(--text-quiet);
+  --color-content-disabled: var(--text-disabled);
+  --color-line: var(--border-default);
+  --color-control: var(--border-control);
+  --color-crm: var(--brand-crm-text);
+  --color-crm-graphic: var(--brand-crm-graphic);
+  --color-crm-soft: var(--crm-badge-bg);
+  --color-crm-on-soft: var(--crm-badge-text);
+  --color-oms: var(--brand-oms-text);
+  --color-oms-soft: var(--oms-badge-bg);
+  --color-oms-on-soft: var(--oms-badge-text);
+  --color-action: var(--action-primary-bg);
+  --color-action-hover: var(--action-primary-hover);
+  --color-action-active: var(--action-primary-active);
+  --color-on-action: var(--action-primary-text);
+  --color-warm: var(--accent-warm-ui);
+  --color-success: var(--success-text);
+  --color-success-soft: var(--success-bg);
+  --color-warning: var(--warning-text);
+  --color-warning-soft: var(--warning-bg);
+  --color-danger: var(--danger-text);
+  --color-danger-soft: var(--danger-bg);
+  --color-info: var(--info-text);
+  --color-info-soft: var(--info-bg);
+  --color-disabled-bg: var(--bg-disabled);
+  --color-selection: var(--table-selection-bg);
+  --color-chart-crm: var(--chart-crm);
+  --color-chart-oms: var(--chart-oms);
+  --color-chart-grid: var(--chart-grid);
+
+  /* shadcn aliases so existing ui/ components follow RELIO */
+  --color-ring: var(--focus-ring);
+  --color-input: var(--border-default);
+  --color-border: var(--border-default);
+  --color-destructive: var(--danger-text);
+  --color-accent-foreground: var(--text-primary);
+  --color-accent: var(--bg-hover);
+  --color-muted-foreground: var(--text-secondary);
+  --color-muted: var(--bg-raised);
+  --color-secondary-foreground: var(--text-primary);
+  --color-secondary: var(--bg-raised);
+  --color-primary-foreground: var(--action-primary-text);
+  --color-primary: var(--action-primary-bg);
+  --color-popover-foreground: var(--text-primary);
+  --color-popover: var(--bg-surface);
+  --color-card-foreground: var(--text-primary);
+  --color-card: var(--bg-surface);
+  --color-foreground: var(--text-primary);
+  --color-background: var(--bg-canvas);
+
+  /* §5.2 radius follows component size */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* §17 motion */
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+  --bg-canvas: #f7f8fa;
+  --bg-surface: #ffffff;
+  --bg-raised: #f0f2f5;
+  --bg-hover: #e7eaf0;
+  --bg-disabled: #eceff3;
+  --text-primary: #202124;
+  --text-secondary: #525866;
+  --text-quiet: #667080;
+  --text-disabled: #aeb5c0;
+  --border-default: #d8dde5;
+  --border-control: #747d8a;
+  --brand-crm-graphic: #28c6cd;
+  --brand-crm-text: #087f8c;
+  --brand-oms-text: #1463d6;
+  --action-primary-bg: #1463d6;
+  --action-primary-text: #ffffff;
+  --action-primary-hover: #1158be;
+  --action-primary-active: #0d4daa;
+  --focus-ring: #1463d6;
+  --accent-warm-ui: #fc9433;
+  --crm-badge-bg: #ddf7f8;
+  --crm-badge-text: #076f7a;
+  --oms-badge-bg: #e1ecff;
+  --oms-badge-text: #1463d6;
+  --success-bg: #ddf5e8;
+  --success-text: #18734a;
+  --warning-bg: #fff0d0;
+  --warning-text: #8a4b08;
+  --danger-bg: #ffe4e1;
+  --danger-text: #b42318;
+  --info-bg: #e1ecff;
+  --info-text: #1463d6;
+  --table-selection-bg: #e1ecff;
+  --logo-ink: #082451;
+  /* chart series: validated for chroma/CVD (dataviz), close to brand hues */
+  --chart-crm: #0b97a3;
+  --chart-oms: #1463d6;
+  --chart-grid: #e7eaf0;
+  --radius: 10px;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23667080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+  --bg-canvas: #18191b;
+  --bg-surface: #222427;
+  --bg-raised: #2d3035;
+  --bg-hover: #34383e;
+  --bg-disabled: #303238;
+  --text-primary: #f5f6f7;
+  --text-secondary: #c2c7d0;
+  --text-quiet: #a0a8b4;
+  --text-disabled: #686f79;
+  --border-default: #41464f;
+  --border-control: #858e9c;
+  --brand-crm-graphic: #5edae0;
+  --brand-crm-text: #5edae0;
+  --brand-oms-text: #75a7ff;
+  --focus-ring: #75a7ff;
+  --crm-badge-bg: #12383c;
+  --crm-badge-text: #5edae0;
+  --oms-badge-bg: #162d50;
+  --oms-badge-text: #75a7ff;
+  --success-bg: #173526;
+  --success-text: #75d9a2;
+  --warning-bg: #3d2d16;
+  --warning-text: #ffd18a;
+  --danger-bg: #421f1e;
+  --danger-text: #ff9a91;
+  --info-bg: #182e50;
+  --info-text: #a2c4ff;
+  --table-selection-bg: #162d50;
+  --logo-ink: #f5f6f7;
+  --chart-crm: #15a3ac;
+  --chart-oms: #4a7fe8;
+  --chart-grid: #34383e;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a0a8b4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-    }
-  body {
-    @apply bg-background text-foreground;
-    }
+    @apply border-line;
+  }
   html {
     @apply font-sans;
-    }
+  }
+  body {
+    @apply bg-canvas text-content;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

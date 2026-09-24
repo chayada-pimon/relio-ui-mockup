@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "tcher": {
+      "source": "Tcher911/tcher-design",
+      "sourceType": "github",
+      "skillPath": "skills/tcher/SKILL.md",
+      "computedHash": "fa662cd9fbab0ffc444a218d1d58d0a37dc2c731fe650b4049b3f22d4be1d476"
+    }
+  }
+}
