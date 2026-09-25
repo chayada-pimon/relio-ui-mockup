@@ -1,11 +1,17 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import {
   ArrowLeft,
   ChatCircleDots,
+  Coins,
   EnvelopeSimple,
+  Eye,
+  EyeSlash,
+  Hourglass,
+  ShieldCheck,
   MapPin,
   Note,
   Phone,
@@ -21,10 +27,13 @@ import {
   activitiesOf,
   customerStats,
   getCustomer,
+  maskEmail,
+  maskPhone,
   orderTotal,
   ordersOf,
   type Activity,
 } from "@/lib/relio/data"
+import { customerLoyalty, orderPoints } from "@/lib/relio/loyalty"
 import {
   Avatar,
   Button,
@@ -35,35 +44,58 @@ import {
   OrderStatusChip,
   PaymentChip,
   SegmentChip,
+  StatusChip,
+  Toast,
+  channelLabel,
 } from "@/components/relio/ui"
 import { NotFound } from "@/components/relio/not-found"
+import { LogActivityDialog } from "@/components/relio/log-activity"
+import { useLoggedActivities } from "@/lib/relio/activity-store"
 
-const activityMeta: Record<Activity["kind"], { icon: Icon; label: DictKey }> =
-  {
-    call: { icon: Phone, label: "actCall" },
-    chat: { icon: ChatCircleDots, label: "actChat" },
-    note: { icon: Note, label: "actNote" },
-    order: { icon: Receipt, label: "actOrder" },
-  }
+const activityMeta: Record<Activity["kind"], { icon: Icon; label: DictKey }> = {
+  call: { icon: Phone, label: "actCall" },
+  chat: { icon: ChatCircleDots, label: "actChat" },
+  note: { icon: Note, label: "actNote" },
+  order: { icon: Receipt, label: "actOrder" },
+}
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { t, money, date } = useLang()
+  const [revealed, setRevealed] = React.useState(false)
+  const [logOpen, setLogOpen] = React.useState(false)
+  const [logged, setLogged] = React.useState(false)
+  const closeToast = React.useCallback(() => setLogged(false), [])
+  const extra = useLoggedActivities()
   const customer = getCustomer(id)
 
-  if (!customer) return <NotFound backHref="/customers" backLabel={t("backToCustomers")} />
+  if (!customer)
+    return <NotFound backHref="/customers" backLabel={t("backToCustomers")} />
 
   const stats = customerStats(customer.id)
+  const loyalty = customerLoyalty(customer.id)
+  const progress = loyalty.next
+    ? Math.min(loyalty.spend12m / loyalty.next.minSpend, 1)
+    : 1
   const list = ordersOf(customer.id).sort((a, b) =>
     b.date.localeCompare(a.date)
   )
-  const timeline = activitiesOf(customer.id).sort((a, b) =>
-    b.date.localeCompare(a.date)
-  )
+  const timeline = [
+    ...activitiesOf(customer.id),
+    ...extra.filter((a) => a.customerId === customer.id),
+  ].sort((a, b) => b.date.localeCompare(a.date))
 
   const contact: { icon: Icon; label: DictKey; value: string }[] = [
-    { icon: Phone, label: "phone", value: customer.phone },
-    { icon: EnvelopeSimple, label: "email", value: customer.email },
+    {
+      icon: Phone,
+      label: "phone",
+      value: revealed ? customer.phone : maskPhone(customer.phone),
+    },
+    {
+      icon: EnvelopeSimple,
+      label: "email",
+      value: revealed ? customer.email : maskEmail(customer.email),
+    },
     { icon: MapPin, label: "city", value: customer.city },
     { icon: User, label: "owner", value: customer.owner },
   ]
@@ -93,7 +125,9 @@ export default function CustomerDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button icon={ChatCircleDots}>{t("logActivity")}</Button>
+          <Button icon={ChatCircleDots} onClick={() => setLogOpen(true)}>
+            {t("logActivity")}
+          </Button>
           <ButtonLink
             href={`/orders/new?customer=${customer.id}`}
             variant="primary"
@@ -110,13 +144,14 @@ export default function CustomerDetailPage() {
             <CardHeader
               title={t("contactInfo")}
               action={
-                <Button
+                <ButtonLink
+                  href={`/customers/${customer.id}/edit`}
                   variant="tertiary"
                   icon={PencilSimple}
                   className="-mt-2 -mr-3"
                 >
                   {t("editCustomer")}
-                </Button>
+                </ButtonLink>
               }
             />
             <dl className="flex flex-col gap-4">
@@ -141,6 +176,107 @@ export default function CustomerDetailPage() {
                 )
               })}
             </dl>
+            <div className="mt-4 border-t border-line pt-3">
+              <Button
+                variant="tertiary"
+                icon={revealed ? EyeSlash : Eye}
+                aria-pressed={revealed}
+                onClick={() => setRevealed((v) => !v)}
+                className="-ml-3"
+              >
+                {revealed ? t("hideFull") : t("showFull")}
+              </Button>
+              <p className="text-xs leading-[1.5] text-content-quiet">
+                {t("viewLogged")}
+              </p>
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title={t("loyaltyCard")} />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex h-7 items-center rounded-full bg-crm-soft px-2.5 text-xs font-semibold text-crm-on-soft">
+                {loyalty.tier.label}
+              </span>
+              <span className="text-sm text-content-secondary">
+                {t("tierRate").replace("{rate}", String(loyalty.tier.rate))}
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs leading-[1.5] text-content-quiet">
+                  <Coins size={16} aria-hidden />
+                  {t("pointsAvailable")}
+                </p>
+                <p className="tabular text-2xl leading-[1.25] font-semibold">
+                  {loyalty.available.toLocaleString("th-TH")}
+                </p>
+              </div>
+              <div>
+                <p className="flex items-center gap-1.5 text-xs leading-[1.5] text-content-quiet">
+                  <Hourglass size={16} aria-hidden />
+                  {t("pointsPending")}
+                </p>
+                <p className="tabular text-2xl leading-[1.25] font-semibold">
+                  {loyalty.pending.toLocaleString("th-TH")}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5">
+              <div className="mb-1.5 flex justify-between gap-3 text-xs text-content-secondary">
+                <span>{t("spend12m")}</span>
+                <span className="tabular font-medium text-content">
+                  {money(loyalty.spend12m)}
+                  {loyalty.next && (
+                    <span className="text-content-quiet">
+                      {" "}
+                      / {money(loyalty.next.minSpend)}
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress * 100)}
+                aria-label={t("spend12m")}
+                className="h-2 overflow-hidden rounded-full bg-raised"
+              >
+                <div
+                  className="h-full rounded-full bg-crm-graphic"
+                  style={{ width: `${progress * 100}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs leading-[1.5] text-content-secondary">
+                {loyalty.next
+                  ? t("toNextTier")
+                      .replace(
+                        "{amount}",
+                        money(loyalty.next.minSpend - loyalty.spend12m)
+                      )
+                      .replace("{tier}", loyalty.next.label)
+                  : t("topTier")}
+              </p>
+            </div>
+            <p className="mt-4 border-t border-line pt-3 text-xs leading-[1.5] text-content-quiet">
+              {t("pointsShareNote")}
+            </p>
+          </Card>
+
+          <Card>
+            <h2 className="mb-2 flex items-center gap-2 text-sm leading-[1.4] font-medium">
+              <ShieldCheck size={18} aria-hidden />
+              {t("pdpa")}
+            </h2>
+            <p className="text-sm leading-[1.6] text-content-secondary">
+              {customer.consentAt
+                ? t("consentGiven").replace("{date}", date(customer.consentAt))
+                : t("consentNone")}
+            </p>
+            <Button variant="tertiary" className="mt-2 -ml-3">
+              {t("requestDelete")}
+            </Button>
           </Card>
 
           <Card className="bg-raised">
@@ -176,7 +312,7 @@ export default function CustomerDetailPage() {
           </div>
 
           <Card>
-            <CardHeader title={t("customerOrders")} context="oms" />
+            <CardHeader title={t("customerOrders")} />
             {list.length === 0 ? (
               <EmptyState
                 icon={Receipt}
@@ -194,34 +330,56 @@ export default function CustomerDetailPage() {
               />
             ) : (
               <ul className="-mx-3 flex flex-col">
-                {list.map((o) => (
-                  <li key={o.id}>
-                    <Link
-                      href={`/orders/${o.id}`}
-                      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md px-3 py-3 hover:bg-raised"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="tabular text-sm leading-[1.4] font-semibold">
-                          {o.id}
-                        </p>
-                        <p className="text-xs leading-[1.5] text-content-quiet">
-                          {date(o.date)} · {o.items.length} {t("items")}
-                        </p>
-                      </div>
-                      <PaymentChip status={o.payment} />
-                      <OrderStatusChip status={o.status} />
-                      <span className="tabular w-24 text-right text-sm font-semibold">
-                        {money(orderTotal(o))}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
+                {list.map((o) => {
+                  const pts = orderPoints(o, loyalty.tier.tier)
+                  return (
+                    <li key={o.id}>
+                      <Link
+                        href={`/orders/${o.id}`}
+                        className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md px-3 py-3 hover:bg-raised"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="tabular text-sm leading-[1.4] font-semibold">
+                            {o.id}
+                          </p>
+                          <p className="text-xs leading-[1.5] text-content-quiet">
+                            {date(o.date)} ·{" "}
+                            {o.store ?? t(channelLabel[o.channel])} ·{" "}
+                            {o.items.length} {t("items")}
+                          </p>
+                        </div>
+                        <PaymentChip status={o.payment} />
+                        <OrderStatusChip status={o.status} />
+                        <div className="w-28 text-right">
+                          <p className="tabular text-sm font-semibold">
+                            {money(orderTotal(o))}
+                          </p>
+                          {pts.state === "available" && (
+                            <p className="tabular text-xs font-medium text-crm">
+                              +{pts.points} {t("pointsUnit")}
+                            </p>
+                          )}
+                          {pts.state === "pending" && (
+                            <StatusChip tone="warning" icon={Hourglass}>
+                              {pts.points} · {t("ptsPending")}
+                            </StatusChip>
+                          )}
+                          {pts.state === "none" && o.status !== "cancelled" && (
+                            <p className="text-xs text-content-quiet">
+                              {t("ptsNone")}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </Card>
 
           <Card>
-            <CardHeader title={t("timeline")} context="crm" />
+            <CardHeader title={t("timeline")} />
             {timeline.length === 0 ? (
               <p className="text-sm text-content-secondary">
                 {t("noActivity")}
@@ -245,8 +403,8 @@ export default function CustomerDetailPage() {
                       </span>
                       <div className="min-w-0 pt-1">
                         <p className="text-sm leading-[1.55]">
-                          <span className="font-medium">{t(meta.label)}</span>{" "}
-                          · {a.text}
+                          <span className="font-medium">{t(meta.label)}</span> ·{" "}
+                          {a.text}
                           {a.orderId && (
                             <>
                               {" "}
@@ -271,6 +429,20 @@ export default function CustomerDetailPage() {
           </Card>
         </div>
       </div>
+
+      <LogActivityDialog
+        open={logOpen}
+        onOpenChange={setLogOpen}
+        customerId={customer.id}
+        onLogged={() => setLogged(true)}
+      />
+      {logged && (
+        <Toast
+          title={t("activityLogged")}
+          body={t("activityLoggedBody")}
+          onClose={closeToast}
+        />
+      )}
     </>
   )
 }

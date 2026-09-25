@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import {
   ArrowsClockwise,
-  Bell,
   ChartLineUp,
   ChartPieSlice,
   Coins,
@@ -27,6 +26,7 @@ import { cn } from "@/lib/utils"
 import { useLang, type DictKey } from "@/lib/relio/i18n"
 import { RelioLogo } from "@/components/relio/logo"
 import { Avatar, IconButton, SearchInput } from "@/components/relio/ui"
+import { NotificationBell } from "@/components/relio/notifications"
 
 type NavItem = {
   href: string
@@ -301,13 +301,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-1 md:gap-2">
             <LangSwitch />
             <ThemeSwitch />
-            <span className="relative">
-              <IconButton icon={Bell} label={t("notifications")} />
-              <span
-                aria-hidden
-                className="absolute top-2.5 right-2.5 size-2 rounded-full bg-warm ring-2 ring-canvas"
-              />
-            </span>
+            <NotificationBell />
           </div>
         </header>
 
@@ -315,7 +309,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="mb-6 md:hidden">
             <GlobalSearch />
           </div>
-          {children}
+          <div key={pathname} className="relio-page">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -118,6 +118,9 @@
   --chart-crm: #0b97a3;
   --chart-oms: #1463d6;
   --chart-grid: #e7eaf0;
+  /* meter fills: graphic tones (>=3:1 on surface), brighter than the text tokens */
+  --meter-warning: #e08a00;
+  --meter-danger: #e5484d;
   --radius: 10px;
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23667080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
 }
@@ -155,6 +158,8 @@
   --chart-crm: #15a3ac;
   --chart-oms: #4a7fe8;
   --chart-grid: #34383e;
+  --meter-warning: #f5a524;
+  --meter-danger: #f76b6b;
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a0a8b4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
 }
 
@@ -179,11 +184,243 @@
   }
 }
 
+/* ------------------------------------------------------ Motion */
+
+@keyframes relio-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes relio-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes relio-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes relio-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes relio-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+:root {
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Page enter: each top-level block rises in, one after another. */
+.relio-page > * {
+  animation: relio-rise 480ms var(--ease-out-soft) both;
+}
+.relio-page > :nth-child(2) { animation-delay: 60ms; }
+.relio-page > :nth-child(3) { animation-delay: 120ms; }
+.relio-page > :nth-child(4) { animation-delay: 180ms; }
+.relio-page > :nth-child(5) { animation-delay: 240ms; }
+.relio-page > :nth-child(6) { animation-delay: 300ms; }
+.relio-page > :nth-child(n + 7) { animation-delay: 360ms; }
+
+/* Cards / tiles inside grids cascade in. */
+.relio-page .grid:not(li) > * {
+  animation: relio-rise 420ms var(--ease-out-soft) both;
+  animation-delay: calc(var(--relio-base, 120ms) + var(--i, 0) * 50ms);
+}
+.relio-page .grid:not(li) > :nth-child(2) { --i: 1; }
+.relio-page .grid:not(li) > :nth-child(3) { --i: 2; }
+.relio-page .grid:not(li) > :nth-child(4) { --i: 3; }
+.relio-page .grid:not(li) > :nth-child(5) { --i: 4; }
+.relio-page .grid:not(li) > :nth-child(6) { --i: 5; }
+.relio-page .grid:not(li) > :nth-child(n + 7) { --i: 6; }
+
+/* Table rows fade in top to bottom. */
+.relio-page tbody > tr {
+  animation: relio-fade 360ms ease-out both;
+  animation-delay: calc(150ms + var(--r, 0) * 30ms);
+}
+.relio-page tbody > tr:nth-child(2) { --r: 1; }
+.relio-page tbody > tr:nth-child(3) { --r: 2; }
+.relio-page tbody > tr:nth-child(4) { --r: 3; }
+.relio-page tbody > tr:nth-child(5) { --r: 4; }
+.relio-page tbody > tr:nth-child(6) { --r: 5; }
+.relio-page tbody > tr:nth-child(7) { --r: 6; }
+.relio-page tbody > tr:nth-child(8) { --r: 7; }
+.relio-page tbody > tr:nth-child(n + 9) { --r: 8; }
+
+/* Interactive cards lift slightly on hover. */
+.relio-page a.rounded-lg,
+.relio-page button.rounded-lg {
+  transition:
+    transform 160ms var(--ease-out-soft),
+    box-shadow 160ms var(--ease-out-soft),
+    background-color 120ms;
+}
+.relio-page a.rounded-lg:hover,
+.relio-page button.rounded-lg:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px -8px rgb(16 24 40 / 0.18);
+}
+
+/* Charts */
+.relio-bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: relio-grow-y 560ms var(--ease-out-soft) both;
+}
+.relio-bar-x {
+  transform-origin: left;
+  animation: relio-grow-x 640ms var(--ease-out-soft) both;
+}
+.relio-line {
+  stroke-dasharray: 1;
+  animation: relio-draw 900ms var(--ease-out-soft) both;
+}
+.relio-area {
+  animation: relio-fade 700ms 300ms ease-out both;
+}
+.relio-dot {
+  transition:
+    cx 160ms var(--ease-out-soft),
+    cy 160ms var(--ease-out-soft);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Shipping label (100 × 150 mm): previewed in the label dialog, and the only
+   thing on the page when printing. */
+.ship-label {
+  box-sizing: border-box;
+  width: 100mm;
+  height: 150mm;
+  padding: 4mm;
+  display: flex;
+  flex-direction: column;
+  gap: 2mm;
+  overflow: hidden;
+  color: #000;
+  background: #fff;
+  font-size: 9pt;
+  line-height: 1.35;
+  text-align: left;
+}
+.ship-label p {
+  margin: 0;
+}
+.ship-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 3mm;
+}
+.ship-head {
+  align-items: baseline;
+  border-bottom: 0.6mm solid #000;
+  padding-bottom: 1.5mm;
+}
+.ship-carrier {
+  font-size: 14pt;
+  font-weight: 700;
+}
+.ship-track {
+  text-align: center;
+}
+.ship-barcode {
+  display: block;
+  width: 100%;
+  height: 15mm;
+  fill: #000;
+}
+.ship-track-no {
+  margin-top: 1mm !important;
+  font-size: 12pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+.ship-cod,
+.ship-paid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5mm 2.5mm;
+  border: 0.5mm solid #000;
+  font-weight: 700;
+}
+.ship-cod {
+  background: #000;
+  color: #fff;
+}
+.ship-cod-amount {
+  font-size: 14pt;
+  font-variant-numeric: tabular-nums;
+}
+.ship-block {
+  border-bottom: 0.3mm dashed #000;
+  padding-bottom: 2mm;
+}
+.ship-to {
+  font-size: 10.5pt;
+}
+.ship-cap {
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.ship-name {
+  font-size: 14pt;
+  font-weight: 700;
+}
+.ship-strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ship-items {
+  min-height: 0;
+  overflow: hidden;
+}
+.ship-label ul {
+  margin: 0;
+  padding-left: 4mm;
+  list-style: disc;
+  font-size: 8pt;
+}
+.ship-foot {
+  margin-top: auto;
+  font-size: 7.5pt;
+}
+
+.print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: 100mm 150mm;
+    margin: 0;
+  }
+  body > *:not(.print-root) {
+    display: none !important;
+  }
+  .print-root {
+    display: block;
+  }
+  .ship-label,
+  .ship-cod {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

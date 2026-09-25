@@ -3,16 +3,12 @@
 export type Segment = "vip" | "regular" | "new"
 
 export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "packing"
-  | "shipped"
-  | "delivered"
-  | "cancelled"
+  "pending" | "confirmed" | "packing" | "shipped" | "delivered" | "cancelled"
 
 export type PaymentStatus = "paid" | "unpaid" | "refunded"
 
-export type Channel = "line" | "website" | "shopee" | "phone"
+export type Channel =
+  "line" | "website" | "shopee" | "lazada" | "tiktok" | "pos" | "phone"
 
 export type Customer = {
   id: string
@@ -25,6 +21,8 @@ export type Customer = {
   owner: string
   lastContact: string
   note: string
+  /** PDPA: when the customer agreed to data collection, if on record. */
+  consentAt?: string
 }
 
 export type OrderItem = {
@@ -41,6 +39,8 @@ export type Order = {
   status: OrderStatus
   payment: PaymentStatus
   channel: Channel
+  /** Store within the channel, when a company runs more than one (e.g. two Shopee shops). */
+  store?: string
   items: OrderItem[]
   shipping: number
   address: string
@@ -67,6 +67,7 @@ export const customers: Customer[] = [
     owner: "ปวีณา",
     lastContact: "2026-09-22",
     note: "ชอบให้แจ้งเลขพัสดุทาง LINE ทุกครั้ง",
+    consentAt: "2025-11-02",
   },
   {
     id: "C-1002",
@@ -79,6 +80,7 @@ export const customers: Customer[] = [
     owner: "ปวีณา",
     lastContact: "2026-09-18",
     note: "สั่งซื้อทุกต้นเดือน ขอใบกำกับภาษีเต็มรูป",
+    consentAt: "2026-01-15",
   },
   {
     id: "C-1003",
@@ -115,6 +117,7 @@ export const customers: Customer[] = [
     owner: "ปวีณา",
     lastContact: "2026-09-10",
     note: "ติดต่อเป็นภาษาอังกฤษ",
+    consentAt: "2026-03-08",
   },
   {
     id: "C-1006",
@@ -139,6 +142,7 @@ export const customers: Customer[] = [
     owner: "ปวีณา",
     lastContact: "2026-09-20",
     note: "ซื้อทั้งหน้าร้านและ Shopee",
+    consentAt: "2025-12-20",
   },
   {
     id: "C-1008",
@@ -163,6 +167,7 @@ export const customers: Customer[] = [
     owner: "ปวีณา",
     lastContact: "2026-09-19",
     note: "",
+    consentAt: "2026-02-11",
   },
   {
     id: "C-1010",
@@ -175,6 +180,124 @@ export const customers: Customer[] = [
     owner: "กิตติ",
     lastContact: "2026-09-05",
     note: "",
+  },
+  {
+    id: "C-1011",
+    name: "สมใจ รักดี",
+    company: "ลูกค้าบุคคล",
+    email: "somjai@example.com",
+    phone: "081-456-0123",
+    city: "กรุงเทพฯ",
+    segment: "regular",
+    owner: "ปวีณา",
+    lastContact: "2026-09-03",
+    note: "ซื้อจาก 4 ร้าน ระบบรวมเป็นโปรไฟล์เดียวจากเบอร์โทรที่ตรงกัน",
+    consentAt: "2026-08-02",
+  },
+]
+
+/** A record from a sales channel that may be the same person as a customer. */
+export type MergeCandidate = {
+  id: string
+  customerId: string
+  /** Why the system thinks they match, strongest first. */
+  matchedOn: ("phone" | "email" | "name")[]
+  confidence: "high" | "medium"
+  record: {
+    name: string
+    phone: string
+    email: string
+    city: string
+    channel: Channel
+    store?: string
+    orders: number
+    spent: number
+    firstSeen: string
+  }
+}
+
+export const mergeCandidates: MergeCandidate[] = [
+  {
+    id: "MG-201",
+    customerId: "C-1001",
+    matchedOn: ["phone", "name"],
+    confidence: "high",
+    record: {
+      name: "Somsri Jaidee",
+      phone: "081-234-5678",
+      email: "somsri.bakery@example.com",
+      city: "เชียงใหม่",
+      channel: "shopee",
+      store: "Shopee ร้านหลัก",
+      orders: 6,
+      spent: 4820,
+      firstSeen: "2026-06-14",
+    },
+  },
+  {
+    id: "MG-202",
+    customerId: "C-1007",
+    matchedOn: ["email", "phone"],
+    confidence: "high",
+    record: {
+      name: "ปิยะนุช สายทอง",
+      phone: "081-990-2231",
+      email: "piyanuch@example.com",
+      city: "สุราษฎร์ธานี",
+      channel: "pos",
+      store: "หน้าร้านสุราษฎร์",
+      orders: 11,
+      spent: 9350,
+      firstSeen: "2025-10-03",
+    },
+  },
+  {
+    id: "MG-203",
+    customerId: "C-1005",
+    matchedOn: ["email"],
+    confidence: "medium",
+    record: {
+      name: "Anna L.",
+      phone: "095-808-9090",
+      email: "anna@example.com",
+      city: "ภูเก็ต",
+      channel: "website",
+      orders: 2,
+      spent: 3100,
+      firstSeen: "2026-08-21",
+    },
+  },
+  {
+    id: "MG-204",
+    customerId: "C-1009",
+    matchedOn: ["phone"],
+    confidence: "medium",
+    record: {
+      name: "คุณนภัส",
+      phone: "091-345-6677",
+      email: "",
+      city: "นนทบุรี",
+      channel: "line",
+      orders: 3,
+      spent: 1260,
+      firstSeen: "2026-09-02",
+    },
+  },
+  {
+    id: "MG-205",
+    customerId: "C-1002",
+    matchedOn: ["name"],
+    confidence: "medium",
+    record: {
+      name: "ธนากร วงศ์ทอง",
+      phone: "089-555-7788",
+      email: "tk.wongthong@example.com",
+      city: "ปทุมธานี",
+      channel: "lazada",
+      orders: 1,
+      spent: 890,
+      firstSeen: "2026-09-11",
+    },
   },
 ]
 
@@ -291,6 +414,54 @@ export const orders: Order[] = [
     shipping: 0,
     address: "199 ถ.สีลม แขวงสุริยวงศ์ เขตบางรัก กรุงเทพฯ 10500",
   },
+  // คุณสมใจ: 4 orders from 4 stores in 3 channels, 4,000 baht in total.
+  {
+    id: "SO-2609-0102",
+    customerId: "C-1011",
+    date: "2026-09-03T15:10:00",
+    status: "delivered",
+    payment: "paid",
+    channel: "pos",
+    store: "สาขาสยาม",
+    items: [{ sku: "GS-300", name: "ชุดของขวัญ", qty: 1, price: 1300 }],
+    shipping: 0,
+    address: "รับสินค้าที่หน้าร้าน",
+  },
+  {
+    id: "SO-2608-0877",
+    customerId: "C-1011",
+    date: "2026-08-21T20:05:00",
+    status: "delivered",
+    payment: "paid",
+    channel: "shopee",
+    store: "Shopee ร้านที่ 2",
+    items: [{ sku: "SN-110", name: "กันแดด", qty: 1, price: 450 }],
+    shipping: 40,
+    address: "59 ซ.อารีย์ 2 แขวงพญาไท เขตพญาไท กรุงเทพฯ 10400",
+  },
+  {
+    id: "SO-2608-0791",
+    customerId: "C-1011",
+    date: "2026-08-10T12:40:00",
+    status: "delivered",
+    payment: "paid",
+    channel: "shopee",
+    store: "Shopee ร้านที่ 1",
+    items: [{ sku: "SR-210", name: "เซรั่ม", qty: 2, price: 500 }],
+    shipping: 40,
+    address: "59 ซ.อารีย์ 2 แขวงพญาไท เขตพญาไท กรุงเทพฯ 10400",
+  },
+  {
+    id: "SO-2608-0702",
+    customerId: "C-1011",
+    date: "2026-08-02T09:25:00",
+    status: "delivered",
+    payment: "paid",
+    channel: "website",
+    items: [{ sku: "CR-120", name: "ครีมบำรุงผิว", qty: 1, price: 1250 }],
+    shipping: 0,
+    address: "59 ซ.อารีย์ 2 แขวงพญาไท เขตพญาไท กรุงเทพฯ 10400",
+  },
 ]
 
 export const activities: Activity[] = [
@@ -354,6 +525,13 @@ export const activities: Activity[] = [
     kind: "chat",
     text: "ทักมาจากแคมเปญ LINE OA",
   },
+  {
+    id: "A-9",
+    customerId: "C-1011",
+    date: "2026-08-10T12:41:00",
+    kind: "note",
+    text: "ระบบรวมออเดอร์ Shopee ร้านที่ 1 เข้าโปรไฟล์เดิม เพราะเบอร์โทรตรงกับออเดอร์จากเว็บไซต์",
+  },
 ]
 
 export const orderFlow: OrderStatus[] = [
@@ -398,6 +576,19 @@ export function customerStats(customerId: string) {
 
 // Fixed "today" so the prototype reads the same on any day.
 export const TODAY = "2026-09-23"
+
+/** PDPA: staff lists show only the first and last digits, e.g. 081-xxx-x123. */
+export function maskPhone(phone: string) {
+  const d = phone.replace(/\D/g, "")
+  if (d.length < 7) return phone
+  return `${d.slice(0, 3)}-xxx-x${d.slice(-3)}`
+}
+
+export function maskEmail(email: string) {
+  const [user, domain] = email.split("@")
+  if (!domain) return email
+  return `${user.slice(0, 1)}${"x".repeat(Math.max(user.length - 1, 3))}@${domain}`
+}
 
 export function daysSince(iso: string) {
   const ms = new Date(TODAY).getTime() - new Date(iso.slice(0, 10)).getTime()

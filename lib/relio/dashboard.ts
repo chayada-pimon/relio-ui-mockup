@@ -136,7 +136,7 @@ export const tasks: Task[] = [
   { id: "late", source: "oms", label: { th: "ใกล้เลย deadline", en: "Near deadline" }, count: 4, urgent: true, href: "/orders?status=confirmed" },
   { id: "label", source: "oms", label: { th: "รอพิมพ์ใบปะหน้า", en: "Labels to print" }, count: 11, href: "/orders?status=packing" },
   { id: "return", source: "oms", label: { th: "คำขอคืนสินค้า", en: "Return requests" }, count: 2, href: "/orders" },
-  { id: "merge", source: "crm", label: { th: "รอตัดสินใจรวมลูกค้า", en: "Merges to review" }, count: 5, href: "/customers" },
+  { id: "merge", source: "crm", label: { th: "รอตัดสินใจรวมลูกค้า", en: "Merges to review" }, count: 5, href: "/customers/merge" },
   { id: "reward", source: "crm", label: { th: "ของรางวัลใกล้หมด", en: "Rewards running low" }, count: 2, href: "/campaigns" },
 ]
 
@@ -180,21 +180,52 @@ export const days: Day[] = Array.from({ length: 91 }, (_, i) => {
   }
 })
 
-export type Range = "7d" | "30d" | "90d"
+export type Preset = "7d" | "30d" | "90d"
 
-export const rangeLabel: Record<Range, Text> = {
+/** A preset window ending today, or a custom inclusive span of ISO dates. */
+export type Range = Preset | { from: string; to: string }
+
+export const rangeLabel: Record<Preset, Text> = {
   "7d": { th: "7 วัน", en: "7 days" },
   "30d": { th: "30 วัน", en: "30 days" },
   "90d": { th: "90 วัน", en: "90 days" },
 }
 
-/** Points for a range: daily for 7/30 days, weekly buckets for 90 days. */
+/** Earliest and latest dates that have data. */
+export const FIRST_DAY = days[0].date
+export const LAST_DAY = days[days.length - 1].date
+
+const presetDays: Record<Preset, number> = { "7d": 7, "30d": 30, "90d": 91 }
+
+/** The inclusive from/to dates a range covers, clamped to the data we have. */
+export function rangeBounds(range: Range): { from: string; to: string } {
+  if (typeof range === "string") {
+    return { from: days[days.length - presetDays[range]].date, to: LAST_DAY }
+  }
+  let { from, to } = range
+  if (from > to) [from, to] = [to, from]
+  return {
+    from: from < FIRST_DAY ? FIRST_DAY : from > LAST_DAY ? LAST_DAY : from,
+    to: to > LAST_DAY ? LAST_DAY : to < FIRST_DAY ? FIRST_DAY : to,
+  }
+}
+
+/** Ranges longer than this many days are shown as weekly totals. */
+const WEEKLY_AFTER = 45
+
+export function isWeekly(range: Range) {
+  const { from, to } = rangeBounds(range)
+  return days.filter((d) => d.date >= from && d.date <= to).length > WEEKLY_AFTER
+}
+
+/** Points for a range: daily up to 45 days, weekly buckets beyond that. */
 export function series(range: Range): Day[] {
-  if (range === "7d") return days.slice(-7)
-  if (range === "30d") return days.slice(-30)
+  const { from, to } = rangeBounds(range)
+  const list = days.filter((d) => d.date >= from && d.date <= to)
+  if (list.length <= WEEKLY_AFTER) return list
   const weeks: Day[] = []
-  for (let i = 0; i < 13; i++) {
-    const chunk = days.slice(i * 7, i * 7 + 7)
+  for (let i = 0; i < list.length; i += 7) {
+    const chunk = list.slice(i, i + 7)
     weeks.push({
       date: chunk[0].date,
       orders: chunk.reduce((s, d) => s + d.orders, 0),
@@ -209,22 +240,24 @@ export function series(range: Range): Day[] {
 export const today = days[days.length - 1]
 export const yesterday = days[days.length - 2]
 
-export type SalesChannel = "line" | "shopee" | "lazada" | "website" | "pos"
+export type SalesChannel = "line" | "shopee" | "lazada" | "tiktok" | "website" | "pos"
 
 export const salesChannelLabel: Record<SalesChannel, Text> = {
   line: { th: "LINE", en: "LINE" },
   shopee: { th: "Shopee", en: "Shopee" },
   lazada: { th: "Lazada", en: "Lazada" },
+  tiktok: { th: "TikTok Shop", en: "TikTok Shop" },
   website: { th: "เว็บไซต์", en: "Website" },
   pos: { th: "หน้าร้าน", en: "In store" },
 }
 
 const channelShare: [SalesChannel, number][] = [
-  ["line", 0.33],
-  ["shopee", 0.25],
-  ["website", 0.16],
-  ["lazada", 0.14],
-  ["pos", 0.12],
+  ["line", 0.3],
+  ["shopee", 0.24],
+  ["website", 0.15],
+  ["lazada", 0.13],
+  ["pos", 0.1],
+  ["tiktok", 0.08],
 ]
 
 /** Split a total by shares with the largest-remainder method so parts sum exactly. */
@@ -289,8 +322,7 @@ export const loyaltyMonth = {
   redeemed: 212450,
   expired: 18300,
   outstanding: 3842900,
-  // Marketplace orders only complete after the buyer confirms receipt or the
-  // return window ends; their points wait here until then. Open decision.
+  // Points wait 7 days after an order completes, in case of a return.
   pending: 58300,
   expiring30d: { points: 96400, customers: 1127 },
 }
@@ -308,23 +340,42 @@ export const nearUpgrade = [
 
 /* --------------------------------------------- 6. Campaigns and rewards */
 
-export const campaigns: {
+export type CampaignRule =
+  | { kind: "multiplier"; multiplier: number }
+  | { kind: "threshold"; minSpend: number; bonus: number }
+  | { kind: "welcome"; bonus: number }
+
+export type CampaignAudience = "all" | "silver" | "gold" | "platinum" | "new"
+
+export type Campaign = {
   id: string
   name: Text
   start: string
   end: string
   priority: number
+  rule: CampaignRule
+  audience: CampaignAudience
+  channels: SalesChannel[]
   orders: number
   points: number
-}[] = [
+  customers: number
+  sales: number
+}
+
+export const campaigns: Campaign[] = [
   {
     id: "CP-01",
     name: { th: "วันเกิดรับคะแนน 2 เท่า", en: "Birthday double points" },
     start: "2026-09-01",
     end: "2026-09-30",
     priority: 1,
+    rule: { kind: "multiplier", multiplier: 2 },
+    audience: "all",
+    channels: ["line", "shopee", "lazada", "tiktok", "website", "pos"],
     orders: 412,
     points: 64800,
+    customers: 388,
+    sales: 1_296_400,
   },
   {
     id: "CP-02",
@@ -332,8 +383,13 @@ export const campaigns: {
     start: "2026-09-15",
     end: "2026-10-15",
     priority: 2,
+    rule: { kind: "threshold", minSpend: 1000, bonus: 100 },
+    audience: "all",
+    channels: ["line", "website", "pos"],
     orders: 1028,
     points: 102800,
+    customers: 874,
+    sales: 1_718_900,
   },
   {
     id: "CP-03",
@@ -341,10 +397,42 @@ export const campaigns: {
     start: "2026-09-01",
     end: "2026-12-31",
     priority: 3,
+    rule: { kind: "welcome", bonus: 100 },
+    audience: "new",
+    channels: ["line"],
     orders: 236,
     points: 23600,
+    customers: 236,
+    sales: 98_200,
   },
 ]
+
+export function getCampaign(id: string) {
+  return campaigns.find((c) => c.id === id)
+}
+
+export function campaignStatus(cp: Pick<Campaign, "start" | "end">) {
+  if (cp.start > TODAY) return "scheduled" as const
+  if (cp.end < TODAY) return "ended" as const
+  return "active" as const
+}
+
+/** Daily orders for a campaign from its start to today, summing to its total. */
+export function campaignDaily(cp: Campaign) {
+  const last = cp.end < TODAY ? cp.end : TODAY
+  const list = days.filter((d) => d.date >= cp.start && d.date <= last)
+  const weights = list.map((d) => d.orders)
+  const total = weights.reduce((s, w) => s + w, 0) || 1
+  let used = 0
+  return list.map((d, i) => {
+    const v =
+      i === list.length - 1
+        ? cp.orders - used
+        : Math.round((weights[i] / total) * cp.orders)
+    used += v
+    return { date: d.date, orders: v }
+  })
+}
 
 export const couponsUsed = { store: 684, web: 1142 }
 
@@ -365,6 +453,7 @@ export const stores: { channel: SalesChannel; connected: boolean; synced: Text }
   { channel: "line", connected: true, synced: { th: "ซิงก์ 2 นาทีที่แล้ว", en: "Synced 2 min ago" } },
   { channel: "shopee", connected: false, synced: { th: "หลุดตั้งแต่ 09:12", en: "Disconnected at 09:12" } },
   { channel: "lazada", connected: true, synced: { th: "ซิงก์ 5 นาทีที่แล้ว", en: "Synced 5 min ago" } },
+  { channel: "tiktok", connected: true, synced: { th: "ซิงก์ 4 นาทีที่แล้ว", en: "Synced 4 min ago" } },
   { channel: "website", connected: true, synced: { th: "ซิงก์ 1 นาทีที่แล้ว", en: "Synced 1 min ago" } },
   { channel: "pos", connected: true, synced: { th: "ซิงก์ 3 นาทีที่แล้ว", en: "Synced 3 min ago" } },
 ]

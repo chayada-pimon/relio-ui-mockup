@@ -4,7 +4,10 @@ import * as React from "react"
 import Link from "next/link"
 import { Select as BaseSelect } from "@base-ui/react/select"
 import {
+  ArrowRight,
+  ArrowUpRight,
   CaretDown,
+  CaretRight,
   Check,
   CheckCircle,
   Clock,
@@ -31,7 +34,7 @@ import type {
 type ButtonVariant = "primary" | "secondary" | "tertiary" | "danger"
 
 const buttonBase =
-  "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md px-4 text-sm leading-[1.4] font-medium whitespace-nowrap transition-colors duration-[120ms] select-none disabled:pointer-events-none aria-disabled:pointer-events-none [&_svg]:shrink-0"
+  "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md px-4 text-sm leading-[1.4] font-medium whitespace-nowrap transition-[color,background-color,border-color,transform] duration-[120ms] select-none active:scale-[0.97] disabled:pointer-events-none aria-disabled:pointer-events-none [&_svg]:shrink-0"
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary:
@@ -44,21 +47,33 @@ const buttonVariants: Record<ButtonVariant, string> = {
     "border border-line bg-surface text-danger hover:bg-danger-soft disabled:text-content-disabled",
 }
 
+// Forward-pointing icons read as "go next", so they sit after the label.
+const trailingIcons = new Set<Icon>([ArrowRight, ArrowUpRight, CaretRight])
+
+type IconPosition = "start" | "end"
+
+const iconAtEnd = (icon: Icon | undefined, position: IconPosition | undefined) =>
+  position ? position === "end" : !!icon && trailingIcons.has(icon)
+
 type ButtonProps = React.ComponentProps<"button"> & {
   variant?: ButtonVariant
   icon?: Icon
+  /** Defaults to "end" for forward arrows, "start" for everything else. */
+  iconPosition?: IconPosition
   loading?: boolean
 }
 
 export function Button({
   variant = "secondary",
   icon: IconCmp,
+  iconPosition,
   loading,
   className,
   children,
   disabled,
   ...props
 }: ButtonProps) {
+  const end = iconAtEnd(IconCmp, iconPosition)
   return (
     <button
       type="button"
@@ -73,9 +88,10 @@ export function Button({
           className="size-[18px] animate-spin rounded-full border-2 border-current border-t-transparent"
         />
       ) : (
-        IconCmp && <IconCmp size={18} aria-hidden />
+        IconCmp && !end && <IconCmp size={18} aria-hidden />
       )}
       {children}
+      {!loading && IconCmp && end && <IconCmp size={18} aria-hidden />}
     </button>
   )
 }
@@ -83,20 +99,24 @@ export function Button({
 export function ButtonLink({
   variant = "secondary",
   icon: IconCmp,
+  iconPosition,
   className,
   children,
   ...props
 }: React.ComponentProps<typeof Link> & {
   variant?: ButtonVariant
   icon?: Icon
+  iconPosition?: IconPosition
 }) {
+  const end = iconAtEnd(IconCmp, iconPosition)
   return (
     <Link
       className={cn(buttonBase, buttonVariants[variant], className)}
       {...props}
     >
-      {IconCmp && <IconCmp size={18} aria-hidden />}
+      {IconCmp && !end && <IconCmp size={18} aria-hidden />}
       {children}
+      {IconCmp && end && <IconCmp size={18} aria-hidden />}
     </Link>
   )
 }
@@ -141,20 +161,15 @@ export function CardHeader({
   title,
   description,
   action,
-  context,
 }: {
   title: string
   description?: string
   action?: React.ReactNode
-  context?: "crm" | "oms"
 }) {
   return (
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl leading-[1.4] font-semibold">{title}</h2>
-          {context && <ProductBadge product={context} />}
-        </div>
+        <h2 className="text-xl leading-[1.4] font-semibold">{title}</h2>
         {description && (
           <p className="mt-0.5 text-sm leading-[1.55] text-content-secondary">
             {description}
@@ -173,11 +188,14 @@ export function PageHeader({
   description,
   actions,
   back,
+  toolbar,
 }: {
   title: string
   description?: string
   actions?: React.ReactNode
   back?: React.ReactNode
+  /** Filters that apply to the whole page, shown on their own row under the title. */
+  toolbar?: React.ReactNode
 }) {
   return (
     <header className="mb-8">
@@ -195,26 +213,12 @@ export function PageHeader({
         </div>
         {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
       </div>
+      {toolbar && <div className="mt-6">{toolbar}</div>}
     </header>
   )
 }
 
 /* --------------------------------------------------------- Chips/badges */
-
-export function ProductBadge({ product }: { product: "crm" | "oms" }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium",
-        product === "crm"
-          ? "bg-crm-soft text-crm-on-soft"
-          : "bg-oms-soft text-oms-on-soft"
-      )}
-    >
-      {product.toUpperCase()}
-    </span>
-  )
-}
 
 type Tone = "success" | "warning" | "danger" | "info" | "neutral"
 
@@ -320,6 +324,9 @@ export const channelLabel: Record<Channel, DictKey> = {
   line: "chLine",
   website: "chWebsite",
   shopee: "chShopee",
+  lazada: "chLazada",
+  tiktok: "chTiktok",
+  pos: "chPos",
   phone: "chPhone",
 }
 
@@ -656,7 +663,7 @@ export function Toast({
   return (
     <div
       role="status"
-      className="fixed right-4 bottom-4 left-4 z-50 flex items-start gap-3 rounded-lg border border-line bg-surface p-4 shadow-[0_8px_24px_rgb(0_0_0/0.12)] sm:left-auto sm:w-[380px]"
+      className="animate-in fade-in slide-in-from-bottom-4 fixed right-4 bottom-4 left-4 z-50 flex duration-300 items-start gap-3 rounded-lg border border-line bg-surface p-4 shadow-[0_8px_24px_rgb(0_0_0/0.12)] sm:left-auto sm:w-[380px]"
     >
       <CheckCircle
         size={20}

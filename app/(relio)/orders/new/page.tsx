@@ -21,6 +21,8 @@ import {
   products,
   type Channel,
   type OrderItem,
+  maskEmail,
+  maskPhone,
 } from "@/lib/relio/data"
 import {
   Avatar,
@@ -176,7 +178,7 @@ function NewOrderForm() {
         <div className="flex min-w-0 flex-col gap-5">
           {/* 1. Customer */}
           <Card>
-            <CardHeader title={`1. ${t("stepCustomer")}`} context="crm" />
+            <CardHeader title={`1. ${t("stepCustomer")}`} />
             <Field
               label={t("selectCustomer")}
               htmlFor="customer"
@@ -204,7 +206,7 @@ function NewOrderForm() {
                     {customer.name}
                   </p>
                   <p className="tabular truncate text-xs text-content-quiet">
-                    {customer.phone} · {customer.email}
+                    {maskPhone(customer.phone)} · {maskEmail(customer.email)}
                   </p>
                 </div>
                 <SegmentChip segment={customer.segment} />
@@ -214,7 +216,7 @@ function NewOrderForm() {
 
           {/* 2. Items */}
           <Card>
-            <CardHeader title={`2. ${t("stepItems")}`} context="oms" />
+            <CardHeader title={`2. ${t("stepItems")}`} />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex-1">
                 <Field
@@ -377,7 +379,9 @@ function NewOrderForm() {
               </div>
               <div className="mt-1 flex justify-between border-t border-line pt-3 text-base font-semibold">
                 <dt>{t("grandTotal")}</dt>
-                <dd className="tabular text-xl">{money(subtotal + shipping)}</dd>
+                <dd className="tabular text-xl">
+                  {money(subtotal + shipping)}
+                </dd>
               </div>
             </dl>
             <div className="mt-6 flex flex-col gap-3">

@@ -9,6 +9,7 @@ import {
   Check,
   MapPin,
   Printer,
+  Truck,
   XCircle,
 } from "@phosphor-icons/react"
 
@@ -21,6 +22,7 @@ import {
   orderSubtotal,
   orderTotal,
   type OrderStatus,
+  maskPhone,
 } from "@/lib/relio/data"
 import {
   Avatar,
@@ -35,6 +37,11 @@ import {
   orderStatusMeta,
 } from "@/components/relio/ui"
 import { NotFound } from "@/components/relio/not-found"
+import {
+  ShippingLabelDialog,
+  carrierName,
+  type ShipmentLabel,
+} from "@/components/relio/shipping-label"
 
 const advanceLabel: Partial<Record<OrderStatus, DictKey>> = {
   pending: "advancePending",
@@ -52,7 +59,11 @@ export default function OrderDetailPage() {
   )
   const [saving, setSaving] = React.useState(false)
   const [toast, setToast] = React.useState(false)
+  const [labelOpen, setLabelOpen] = React.useState(false)
+  const [shipment, setShipment] = React.useState<ShipmentLabel | null>(null)
+  const [labelToast, setLabelToast] = React.useState(false)
   const closeToast = React.useCallback(() => setToast(false), [])
+  const closeLabelToast = React.useCallback(() => setLabelToast(false), [])
 
   if (!order)
     return <NotFound backHref="/orders" backLabel={t("backToOrders")} />
@@ -103,7 +114,11 @@ export default function OrderDetailPage() {
               {t("cancelOrder")}
             </Button>
           )}
-          <Button icon={Printer}>{t("printLabel")}</Button>
+          {order.channel !== "pos" && status !== "cancelled" && (
+            <Button icon={Printer} onClick={() => setLabelOpen(true)}>
+              {t(shipment ? "labelReprint" : "printLabel")}
+            </Button>
+          )}
           {next && (
             <Button
               variant="primary"
@@ -141,7 +156,11 @@ export default function OrderDetailPage() {
                       aria-hidden
                       className={cn(
                         "h-0.5 flex-1",
-                        i === 0 ? "invisible" : done || current ? "bg-oms" : "bg-line"
+                        i === 0
+                          ? "invisible"
+                          : done || current
+                            ? "bg-oms"
+                            : "bg-line"
                       )}
                     />
                     <span
@@ -149,7 +168,9 @@ export default function OrderDetailPage() {
                         "inline-flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200",
                         done && "border-oms bg-action text-on-action",
                         current && "border-oms bg-oms-soft text-oms-on-soft",
-                        !done && !current && "border-line bg-surface text-content-disabled"
+                        !done &&
+                          !current &&
+                          "border-line bg-surface text-content-disabled"
                       )}
                     >
                       {done ? (
@@ -173,7 +194,11 @@ export default function OrderDetailPage() {
                   <span
                     className={cn(
                       "text-xs leading-[1.4] sm:text-sm",
-                      current ? "font-semibold text-oms" : done ? "text-content" : "text-content-quiet"
+                      current
+                        ? "font-semibold text-oms"
+                        : done
+                          ? "text-content"
+                          : "text-content-quiet"
                     )}
                   >
                     {t(orderStatusMeta[s].label)}
@@ -192,7 +217,7 @@ export default function OrderDetailPage() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card>
-          <CardHeader title={t("orderItems")} context="oms" />
+          <CardHeader title={t("orderItems")} />
           <div className="-mx-6 overflow-x-auto">
             <table className="w-full min-w-[520px] text-left text-sm">
               <thead className="border-y border-line bg-raised text-xs text-content-secondary">
@@ -253,13 +278,13 @@ export default function OrderDetailPage() {
         <div className="flex flex-col gap-5">
           {customer && (
             <Card>
-              <CardHeader title={t("orderedBy")} context="crm" />
+              <CardHeader title={t("orderedBy")} />
               <div className="flex items-center gap-3">
                 <Avatar name={customer.name} size={48} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{customer.name}</p>
                   <p className="tabular truncate text-sm text-content-secondary">
-                    {customer.phone}
+                    {maskPhone(customer.phone)}
                   </p>
                 </div>
                 <SegmentChip segment={customer.segment} />
@@ -286,9 +311,44 @@ export default function OrderDetailPage() {
             <p className="text-sm leading-[1.6] text-content-secondary">
               {order.address}
             </p>
+            {shipment && (
+              <div className="mt-4 flex items-start gap-3 rounded-md bg-raised p-3 text-sm">
+                <Truck
+                  size={20}
+                  aria-hidden
+                  className="mt-0.5 shrink-0 text-content-secondary"
+                />
+                <div className="min-w-0">
+                  <p className="font-medium">{carrierName(shipment.carrier)}</p>
+                  <p className="tabular text-content-secondary select-all">
+                    {t("labelTracking")} {shipment.tracking}
+                  </p>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>
+
+      <ShippingLabelDialog
+        open={labelOpen}
+        onOpenChange={setLabelOpen}
+        order={order}
+        customer={customer}
+        current={shipment}
+        onCreated={(s) => {
+          setShipment(s)
+          setLabelToast(true)
+        }}
+      />
+
+      {labelToast && shipment && (
+        <Toast
+          title={t("labelCreated")}
+          body={`${carrierName(shipment.carrier)} · ${shipment.tracking}`}
+          onClose={closeLabelToast}
+        />
+      )}
 
       {toast && (
         <Toast

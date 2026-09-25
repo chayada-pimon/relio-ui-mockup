@@ -278,9 +278,11 @@ export function LineChart({
               </text>
             ) : null
           )}
-          <path d={area} fill={color} opacity={0.1} />
+          <path d={area} fill={color} opacity={0.1} className="relio-area" />
           <path
             d={line}
+            pathLength={1}
+            className="relio-line"
             fill="none"
             stroke={color}
             strokeWidth={2}
@@ -297,6 +299,7 @@ export function LineChart({
             />
           )}
           <circle
+            className="relio-dot"
             cx={xAt(active ?? last)}
             cy={yAt(points[active ?? last].v)}
             r={4.5}
@@ -413,12 +416,14 @@ export function StackedColumns({
             const h1 = Math.max(hOf(val(p, series[1].key)) - 2, 0)
             const dim = active !== null && active !== i
             return (
-              <g key={p.x} opacity={dim ? 0.55 : 1}>
-                <rect x={x} y={base - h0} width={barW} height={h0} fill={series[0].color} />
-                <path
-                  d={topRounded(x, base - h0 - 2 - h1, barW, h1, 4)}
-                  fill={series[1].color}
-                />
+              <g key={p.x} opacity={dim ? 0.55 : 1} className="transition-opacity duration-150">
+                <g className="relio-bar" style={{ animationDelay: `${i * 35}ms` }}>
+                  <rect x={x} y={base - h0} width={barW} height={h0} fill={series[0].color} />
+                  <path
+                    d={topRounded(x, base - h0 - 2 - h1, barW, h1, 4)}
+                    fill={series[1].color}
+                  />
+                </g>
                 {(i % every === 0 || i === last) && (
                   <text
                     x={cx}
@@ -473,13 +478,18 @@ export function BarList({
   const max = Math.max(...rows.map((r) => r.value), 1)
   return (
     <ul aria-label={ariaLabel} className="flex flex-col gap-3">
-      {rows.map((r) => (
+      {rows.map((r, i) => (
         <li key={r.label} className="grid grid-cols-[80px_minmax(0,1fr)_auto] items-center gap-3">
           <span className="truncate text-sm text-content-secondary">{r.label}</span>
           <span className="h-4">
             <span
-              className="block h-full rounded-r-xs"
-              style={{ width: `${(r.value / max) * 100}%`, background: color, minWidth: 2 }}
+              className="relio-bar-x block h-full rounded-r-xs transition-[width] duration-500"
+              style={{
+                width: `${(r.value / max) * 100}%`,
+                background: color,
+                minWidth: 2,
+                animationDelay: `${i * 60}ms`,
+              }}
             />
           </span>
           <span className="tabular min-w-[88px] text-right text-sm">
@@ -509,8 +519,15 @@ export function SplitBar({
         {parts.map((p, i) => (
           <span
             key={p.label}
-            className={cn("block h-full", i === 0 ? "rounded-l-xs" : "rounded-r-xs")}
-            style={{ width: `${(p.value / total) * 100}%`, background: p.color }}
+            className={cn(
+              "relio-bar-x block h-full transition-[width] duration-500",
+              i === 0 ? "rounded-l-xs" : "rounded-r-xs"
+            )}
+            style={{
+              width: `${(p.value / total) * 100}%`,
+              background: p.color,
+              animationDelay: `${i * 120}ms`,
+            }}
           />
         ))}
       </div>
@@ -549,9 +566,9 @@ export function Meter({
   const tone = pct >= 0.95 ? "danger" : pct >= 0.8 ? "warning" : "ok"
   const fill =
     tone === "danger"
-      ? "var(--danger-text)"
+      ? "var(--meter-danger)"
       : tone === "warning"
-        ? "var(--warning-text)"
+        ? "var(--meter-warning)"
         : "var(--action-primary-bg)"
   return (
     <div className="flex flex-col gap-1.5">
@@ -573,9 +590,9 @@ export function Meter({
         aria-valuemax={limit}
         aria-valuenow={used}
         className="h-2 overflow-hidden rounded-full"
-        style={{ background: `color-mix(in srgb, ${fill} 18%, var(--bg-surface))` }}
+        style={{ background: "var(--chart-grid)" }}
       >
-        <div className="h-full rounded-full" style={{ width: `${Math.min(pct, 1) * 100}%`, background: fill }} />
+        <div className="relio-bar-x h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.min(pct, 1) * 100}%`, background: fill }} />
       </div>
     </div>
   )

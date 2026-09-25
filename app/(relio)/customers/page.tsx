@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { UserPlus, UsersThree } from "@phosphor-icons/react"
+import { ArrowsMerge, UserPlus, UsersThree } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 import { useLang, type DictKey } from "@/lib/relio/i18n"
@@ -12,10 +12,13 @@ import {
   customers,
   daysSince,
   type Segment,
+  maskEmail,
+  mergeCandidates,
+  maskPhone,
 } from "@/lib/relio/data"
 import {
   Avatar,
-  Button,
+  ButtonLink,
   Card,
   EmptyState,
   PageHeader,
@@ -54,9 +57,17 @@ function CustomersView() {
         title={t("customersTitle")}
         description={t("customersSub")}
         actions={
-          <Button variant="primary" icon={UserPlus}>
-            {t("addCustomer")}
-          </Button>
+          <>
+            <ButtonLink href="/customers/merge" icon={ArrowsMerge}>
+              {t("mergeDuplicates")}
+              <span className="tabular inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-warning-soft px-1.5 text-xs font-semibold text-warning">
+                {mergeCandidates.length}
+              </span>
+            </ButtonLink>
+            <ButtonLink href="/customers/new" variant="primary" icon={UserPlus}>
+              {t("addCustomer")}
+            </ButtonLink>
+          </>
         }
       />
 
@@ -107,9 +118,9 @@ function CustomersView() {
             title={t("emptyCustomersTitle")}
             body={t("emptyCustomersBody")}
             action={
-              <Button variant="primary" icon={UserPlus}>
+              <ButtonLink href="/customers/new" variant="primary" icon={UserPlus}>
                 {t("addCustomer")}
-              </Button>
+              </ButtonLink>
             }
           />
         ) : (
@@ -152,7 +163,7 @@ function CustomersView() {
                           <div className="min-w-0">
                             <Link
                               href={`/customers/${c.id}`}
-                              className="font-semibold after:absolute after:inset-0 group-hover:text-crm"
+                              className="font-semibold group-hover:text-crm after:absolute after:inset-0"
                             >
                               {c.name}
                             </Link>
@@ -163,9 +174,9 @@ function CustomersView() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="tabular">{c.phone}</p>
+                        <p className="tabular">{maskPhone(c.phone)}</p>
                         <p className="text-xs leading-[1.5] text-content-quiet">
-                          {c.email}
+                          {maskEmail(c.email)}
                         </p>
                       </td>
                       <td className="px-4 py-3">

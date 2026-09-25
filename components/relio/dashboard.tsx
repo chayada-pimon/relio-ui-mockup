@@ -9,6 +9,7 @@ import {
   Bell,
   CheckCircle,
   Clock,
+  ClockCountdown,
   Coins,
   Gift,
   Hourglass,
@@ -21,26 +22,26 @@ import {
   TrendUp,
   Truck,
   WarningCircle,
-  WarningOctagon,
   type Icon,
 } from "@phosphor-icons/react"
 
 import { cn } from "@/lib/utils"
 import { useLang } from "@/lib/relio/i18n"
 import { getCustomer } from "@/lib/relio/data"
+import { TIER_RULES, pointsFor } from "@/lib/relio/loyalty"
+import { useCampaigns } from "@/lib/relio/campaign-store"
 import {
   GOLDEN_RECORDS,
   MULTI_CHANNEL,
-  alerts,
-  campaigns,
   couponsUsed,
   customerOverview,
+  days,
+  isWeekly,
   loyaltyMonth,
   lowRewards,
   lowStock,
   nearUpgrade,
   plan,
-  rangeLabel,
   salesChannelLabel,
   series,
   stores,
@@ -50,14 +51,14 @@ import {
   todayByChannel,
   topCustomers,
   yesterday,
-  type Range,
   type Text,
 } from "@/lib/relio/dashboard"
+import { useRange, useRangeText } from "@/components/relio/range"
 import {
   Avatar,
   Button,
+  ButtonLink,
   Card,
-  ProductBadge,
   StatusChip,
 } from "@/components/relio/ui"
 import {
@@ -72,16 +73,26 @@ import {
 
 /* UI copy local to the dashboard, TH + EN side by side. */
 const c = {
-  alerts: { th: "แจ้งเตือนระบบ", en: "System alerts" },
+  pulse: { th: "ตัวเลขสำคัญ", en: "Key numbers" },
+  salesToday: { th: "ยอดขายวันนี้", en: "Sales today" },
+  ordersToday: { th: "ออเดอร์วันนี้", en: "Orders today" },
+  sales30: { th: "ยอดขาย 30 วัน", en: "Sales, last 30 days" },
+  vsPrev30: { th: "จาก 30 วันก่อน", en: "vs previous 30 days" },
+  allCustomers: { th: "ลูกค้าทั้งหมด", en: "All customers" },
+  newIn30: { th: "ลูกค้าใหม่ 30 วัน", en: "new in 30 days" },
+  repeat30: { th: "ซื้อซ้ำ", en: "repeat" },
+  trend30: { th: "ยอดขาย 30 วันล่าสุด", en: "Sales, last 30 days" },
+  seeReports: { th: "ดูรายงาน", en: "See reports" },
   tasks: { th: "งานที่ต้องทำวันนี้", en: "To do today" },
   urgent: { th: "ด่วน", en: "Urgent" },
-  todayTitle: { th: "สรุปยอดวันนี้", en: "Today's summary" },
+  todayShort: { th: "วันนี้", en: "Today" },
   orders: { th: "ออเดอร์", en: "Orders" },
   sales: { th: "ยอดขาย", en: "Sales" },
   vsYesterday: { th: "จากเมื่อวาน", en: "vs yesterday" },
   byChannel: { th: "ยอดขายตามช่องทาง", en: "Sales by channel" },
   ordersUnit: { th: "ออเดอร์", en: "orders" },
   period: { th: "ช่วงเวลา", en: "Period" },
+  thisMonth: { th: "เดือนนี้", en: "This month" },
   customers: { th: "ภาพรวมลูกค้า", en: "Customer overview" },
   multiChannel: { th: "ลูกค้าที่ซื้อมากกว่าหนึ่งช่องทาง", en: "Customers buying on more than one channel" },
   multiChannelSub: {
@@ -97,7 +108,6 @@ const c = {
   channels: { th: "ช่องทาง", en: "Channels" },
   customer: { th: "ลูกค้า", en: "Customer" },
   loyalty: { th: "คะแนนสะสม", en: "Loyalty points" },
-  thisMonth: { th: "เดือนนี้", en: "This month" },
   issued: { th: "แจกออก", en: "Issued" },
   redeemed: { th: "ถูกแลก", en: "Redeemed" },
   expired: { th: "หมดอายุ", en: "Expired" },
@@ -105,13 +115,42 @@ const c = {
   outstandingSub: { th: "ภาระทางบัญชีของร้าน", en: "The store's accounting liability" },
   pending: { th: "คะแนนรอยืนยัน", en: "Points awaiting confirmation" },
   pendingSub: {
-    th: "ออเดอร์มาร์เกตเพลสที่ผู้ซื้อยังไม่ยืนยันรับสินค้า",
-    en: "Marketplace orders the buyer has not confirmed yet",
+    th: "รอ 7 วันหลังออเดอร์สำเร็จ เผื่อลูกค้าคืนสินค้า",
+    en: "Held for 7 days after the order completes, in case of a return",
   },
   expiring: { th: "หมดอายุใน 30 วัน", en: "Expiring in 30 days" },
   customersUnit: { th: "ลูกค้า", en: "customers" },
   pointsUnit: { th: "คะแนน", en: "points" },
-  notifyExpiring: { th: "ส่งแจ้งเตือนลูกค้า", en: "Notify customers" },
+  notifyExpiring: { th: "ดูรายชื่อลูกค้า", en: "View customer list" },
+  notifyNote: {
+    th: "รุ่นแรกยังไม่ส่ง SMS ให้ทีมงานติดต่อลูกค้าเอง",
+    en: "Version 1 sends no SMS. The team contacts these customers.",
+  },
+  rules: { th: "กติกาคะแนน", en: "Points rules" },
+  rulesSub: { th: "ค่าเริ่มต้น แต่ละบริษัทปรับเองได้", en: "Defaults. Each company can change them." },
+  tierCol: { th: "ระดับ", en: "Tier" },
+  rateCol: { th: "อัตรา", en: "Rate" },
+  reachCol: { th: "ยอดซื้อ 12 เดือน", en: "12-month spend" },
+  per1000: { th: "ซื้อ ฿1,000", en: "On ฿1,000" },
+  starter: { th: "ระดับเริ่มต้น", en: "Starting tier" },
+  from: { th: "ตั้งแต่", en: "From" },
+  rateUnit: { th: "บาท = 1 แต้ม", en: "baht = 1 point" },
+  ruleEarn: {
+    th: "คิดจากยอดหลังหักส่วนลด ไม่รวมค่าส่ง ตัดเศษทิ้ง (Silver: ฿274 = 10 แต้ม)",
+    en: "Based on the amount after discounts, excluding shipping. Fractions are dropped (Silver: ฿274 = 10 points).",
+  },
+  ruleWait: {
+    th: "แต้มรอยืนยัน 7 วันหลังออเดอร์สำเร็จ ถ้าคืนสินค้าภายใน 7 วัน แต้มถูกยกเลิก",
+    en: "Points wait 7 days after the order completes. A return within 7 days cancels them.",
+  },
+  ruleExpire: {
+    th: "แต้มมีอายุ 12 เดือน ใช้แต้มที่ใกล้หมดอายุก่อน",
+    en: "Points last 12 months. The oldest points are used first.",
+  },
+  ruleTier: {
+    th: "เลื่อนระดับทันทีเมื่อถึงเกณฑ์ ทบทวนระดับทุกต้นเดือน",
+    en: "Customers move up as soon as they qualify. Tiers are reviewed at the start of each month.",
+  },
   tierMix: { th: "ลูกค้าตาม Tier", en: "Customers by tier" },
   nearUpgrade: { th: "ใกล้ถึงเกณฑ์อัปเกรด Tier", en: "Close to a tier upgrade" },
   makeSegment: { th: "สร้างกลุ่มเป้าหมาย", en: "Create segment" },
@@ -172,25 +211,20 @@ function useCopy() {
 function Section({
   id,
   title,
-  context,
   aside,
   children,
 }: {
   id: string
   title: string
-  context?: "crm" | "oms"
   aside?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-24">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h2 id={`${id}-h`} className="text-xl leading-[1.4] font-semibold">
-            {title}
-          </h2>
-          {context && <ProductBadge product={context} />}
-        </div>
+        <h2 id={`${id}-h`} className="text-xl leading-[1.4] font-semibold">
+          {title}
+        </h2>
         {aside}
       </div>
       {children}
@@ -198,20 +232,31 @@ function Section({
   )
 }
 
+const figureTone = {
+  success: { bar: "border-l-3 border-success pl-3", icon: "text-success" },
+  info: { bar: "border-l-3 border-info pl-3", icon: "text-info" },
+  warning: { bar: "border-l-3 border-warning pl-3", icon: "text-warning" },
+} as const
+
 function Figure({
   label,
   value,
   sub,
+  icon: IconCmp,
+  tone,
   className,
 }: {
   label: string
   value: string
   sub?: React.ReactNode
+  icon?: Icon
+  tone?: keyof typeof figureTone
   className?: string
 }) {
   return (
-    <div className={cn("flex flex-col gap-1", className)}>
-      <span className="text-sm leading-[1.4] font-medium text-content-secondary">
+    <div className={cn("flex flex-col gap-1", tone && figureTone[tone].bar, className)}>
+      <span className="flex items-center gap-1.5 text-sm leading-[1.4] font-medium text-content-secondary">
+        {IconCmp && <IconCmp size={18} aria-hidden className={cn("shrink-0", tone && figureTone[tone].icon)} />}
         {label}
       </span>
       <span className="text-[28px] leading-[1.2] font-semibold">{value}</span>
@@ -231,64 +276,6 @@ function Delta({ now, before, label }: { now: number; before: number; label: str
       {Math.abs(pct).toFixed(1)}%
       <span className="font-normal text-content-quiet">{label}</span>
     </span>
-  )
-}
-
-/* ------------------------------------------------------------ 1. Alerts */
-
-const alertIcon: Record<"danger" | "warning" | "info", Icon> = {
-  danger: WarningOctagon,
-  warning: WarningCircle,
-  info: Bell,
-}
-
-function AlertsSection() {
-  const { l, tx } = useCopy()
-  return (
-    <Section id="alerts" title={l("alerts")} aside={<span className="text-sm text-content-quiet">{alerts.length}</span>}>
-      <ul className="flex flex-col gap-2">
-        {alerts.map((a) => {
-          const IconCmp = alertIcon[a.tone]
-          return (
-            <li
-              key={a.id}
-              className={cn(
-                "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg px-4 py-3",
-                a.tone === "danger" ? "bg-danger-soft" : a.tone === "warning" ? "bg-warning-soft" : "bg-info-soft"
-              )}
-            >
-              <IconCmp
-                size={20}
-                weight="bold"
-                aria-hidden
-                className={cn(
-                  "shrink-0",
-                  a.tone === "danger" ? "text-danger" : a.tone === "warning" ? "text-warning" : "text-info"
-                )}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-2 text-sm leading-[1.4] font-semibold">
-                  {tx(a.title)}
-                  <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] leading-none font-medium text-content-secondary">
-                    {a.source.toUpperCase()}
-                  </span>
-                </p>
-                <p className="text-sm leading-[1.55] text-content-secondary">{tx(a.body)}</p>
-              </div>
-              {a.action && (
-                <Link
-                  href={a.action.href}
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-surface px-4 text-sm font-medium text-content hover:bg-hover"
-                >
-                  {tx(a.action.label)}
-                  <ArrowRight size={16} aria-hidden />
-                </Link>
-              )}
-            </li>
-          )
-        })}
-      </ul>
-    </Section>
   )
 }
 
@@ -339,27 +326,102 @@ function TasksSection() {
   )
 }
 
-/* ------------------------------------------------------ 3. Today summary */
+/* ------------------------------------------------------- 1. Key numbers */
 
-function TodaySection() {
-  const { l, tx, num, money, date } = useCopy()
+function sum(list: typeof days, key: "orders" | "sales") {
+  return list.reduce((s, d) => s + d[key], 0)
+}
+
+function PulseSection() {
+  const { l, num, money, date } = useCopy()
+  const last30 = sum(days.slice(-30), "sales")
+  const prev30 = sum(days.slice(-60, -30), "sales")
+  const cust = customerOverview("30d")
   return (
-    <Section id="today" title={l("todayTitle")} context="oms" aside={<span className="text-sm text-content-quiet">{date(today.date)}</span>}>
-      <Card className="grid grid-cols-1 gap-8 md:grid-cols-[220px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-6">
+    <Section id="pulse" title={l("pulse")} aside={<span className="text-sm text-content-quiet">{date(today.date)}</span>}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="p-5">
           <Figure
-            label={l("orders")}
-            value={num(today.orders)}
-            sub={<Delta now={today.orders} before={yesterday.orders} label={l("vsYesterday")} />}
-          />
-          <Figure
-            label={l("sales")}
+            label={l("salesToday")}
             value={money(today.sales)}
             sub={<Delta now={today.sales} before={yesterday.sales} label={l("vsYesterday")} />}
           />
-        </div>
-        <div className="min-w-0">
-          <h3 className="mb-4 text-base leading-[1.4] font-semibold">{l("byChannel")}</h3>
+        </Card>
+        <Card className="p-5">
+          <Figure
+            label={l("ordersToday")}
+            value={num(today.orders)}
+            sub={<Delta now={today.orders} before={yesterday.orders} label={l("vsYesterday")} />}
+          />
+        </Card>
+        <Card className="p-5">
+          <Figure
+            label={l("sales30")}
+            value={money(last30)}
+            sub={<Delta now={last30} before={prev30} label={l("vsPrev30")} />}
+          />
+        </Card>
+        <Card className="p-5">
+          <Figure
+            label={l("allCustomers")}
+            value={num(GOLDEN_RECORDS)}
+            sub={
+              <>
+                +{num(cust.newCustomers)} {l("newIn30")} · {(cust.repeatRate * 100).toFixed(0)}% {l("repeat30")}
+              </>
+            }
+          />
+        </Card>
+      </div>
+    </Section>
+  )
+}
+
+/* -------------------------------------------------- 3. Sales at a glance */
+
+function SalesSection() {
+  const { l, tx, num, money, lang } = useCopy()
+  const list = series("30d")
+  const locale = lang === "th" ? "th-TH" : "en-GB"
+  const fmtX = (x: string) =>
+    new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${x}T00:00:00Z`))
+  return (
+    <Section
+      id="sales"
+      title={l("trend30")}
+      aside={
+        <Link href="/reports" className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-content-secondary hover:bg-hover hover:text-content">
+          {l("seeReports")}
+          <ArrowRight size={16} aria-hidden />
+        </Link>
+      }
+    >
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <Card className="min-w-0">
+          <ChartFrame
+            title={l("salesTrend")}
+            description={l("salesTrendSub")}
+            labels={{ showTable: l("showTable"), showChart: l("showChart") }}
+            table={{
+              columns: [l("date"), l("orders"), l("sales")],
+              rows: list.map((d) => [fmtX(d.date), num(d.orders), money(d.sales)]),
+            }}
+          >
+            <LineChart
+              points={list.map((d) => ({ x: d.date, v: d.sales }))}
+              color="var(--chart-oms)"
+              seriesLabel={l("sales")}
+              formatValue={money}
+              formatTick={(v) => `฿${compact(v, lang)}`}
+              formatX={fmtX}
+              ariaLabel={`${l("trend30")}: ${money(list[list.length - 1].sales)}`}
+            />
+          </ChartFrame>
+        </Card>
+        <Card className="min-w-0">
+          <h3 className="mb-4 text-base leading-[1.4] font-semibold">
+            {l("byChannel")} · {l("todayShort")}
+          </h3>
           <BarList
             ariaLabel={l("byChannel")}
             color="var(--chart-oms)"
@@ -370,42 +432,18 @@ function TodaySection() {
               sub: `${num(r.orders)} ${l("ordersUnit")}`,
             }))}
           />
-        </div>
-      </Card>
-    </Section>
-  )
-}
-
-/* ---------------------------------------------------- Range filter row */
-
-export function RangeFilter({ range, onChange }: { range: Range; onChange: (r: Range) => void }) {
-  const { l, tx } = useCopy()
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div role="group" aria-label={l("period")} className="inline-flex rounded-full border border-line bg-surface p-1">
-        {(Object.keys(rangeLabel) as Range[]).map((r) => (
-          <button
-            key={r}
-            type="button"
-            aria-pressed={range === r}
-            onClick={() => onChange(r)}
-            className={cn(
-              "h-9 rounded-full px-4 text-sm font-medium transition-colors duration-[120ms]",
-              range === r ? "bg-raised text-content" : "text-content-quiet hover:text-content"
-            )}
-          >
-            {tx(rangeLabel[r])}
-          </button>
-        ))}
+        </Card>
       </div>
-    </div>
+    </Section>
   )
 }
 
 /* ----------------------------------------------------- 4. Customers */
 
-export function CustomerInsights({ range }: { range: Range }) {
+export function CustomerInsights() {
   const { l, tx, num, money } = useCopy()
+  const { range } = useRange()
+  const rangeText = useRangeText()
   const o = customerOverview(range)
   return (
     <>
@@ -422,7 +460,7 @@ export function CustomerInsights({ range }: { range: Range }) {
           </div>
           <div className="grid grid-cols-1 gap-5 border-t border-line pt-5 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
             <Figure label={l("golden")} value={num(GOLDEN_RECORDS)} />
-            <Figure label={`${l("newInRange")} · ${tx(rangeLabel[range])}`} value={num(o.newCustomers)} />
+            <Figure label={`${l("newInRange")} · ${rangeText(range)}`} value={num(o.newCustomers)} />
             <Figure label={l("repeatRate")} value={`${(o.repeatRate * 100).toFixed(1)}%`} />
           </div>
         </Card>
@@ -488,8 +526,14 @@ export function LoyaltyPanel() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Card className="flex flex-col gap-5 lg:col-span-2">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {(["issued", "redeemed", "expired"] as const).map((k) => (
-              <Figure key={k} label={`${l(k)} · ${l("thisMonth")}`} value={num(loyaltyMonth[k])} sub={l("pointsUnit")} />
+            {(
+              [
+                ["issued", Coins, "success"],
+                ["redeemed", Gift, "info"],
+                ["expired", ClockCountdown, "warning"],
+              ] as const
+            ).map(([k, icon, tone]) => (
+              <Figure key={k} icon={icon} tone={tone} label={`${l(k)} · ${l("thisMonth")}`} value={num(loyaltyMonth[k])} sub={l("pointsUnit")} />
             ))}
           </div>
           <div className="grid grid-cols-1 gap-3 border-t border-line pt-5 md:grid-cols-3">
@@ -518,10 +562,11 @@ export function LoyaltyPanel() {
               <span className="text-xs text-content-secondary">
                 {num(loyaltyMonth.expiring30d.customers)} {l("customersUnit")}
               </span>
-              <button type="button" className="mt-2 inline-flex min-h-11 items-center gap-1.5 self-start rounded-md bg-surface px-3 text-sm font-medium hover:bg-hover">
+              <Link href="/customers" className="mt-2 inline-flex min-h-11 items-center gap-1.5 self-start rounded-md bg-surface px-3 text-sm font-medium hover:bg-hover">
                 <Bell size={16} aria-hidden />
                 {l("notifyExpiring")}
-              </button>
+              </Link>
+              <span className="text-xs text-content-secondary">{l("notifyNote")}</span>
             </div>
           </div>
         </Card>
@@ -554,9 +599,52 @@ export function LoyaltyPanel() {
                 </li>
               ))}
             </ul>
-            <Button icon={Megaphone} className="mt-4 w-full">
+            <ButtonLink href="/loyalty/segments/new" icon={Megaphone} className="mt-4 w-full">
               {l("makeSegment")}
-            </Button>
+            </ButtonLink>
+          </div>
+        </Card>
+
+        <Card className="min-w-0 p-0 lg:col-span-3">
+          <div className="px-6 pt-5 pb-3">
+            <h3 className="text-base leading-[1.4] font-semibold">{l("rules")}</h3>
+            <p className="text-sm leading-[1.55] text-content-secondary">{l("rulesSub")}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-0 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[440px] text-left text-sm">
+                <thead className="border-y border-line bg-raised text-xs text-content-secondary">
+                  <tr>
+                    <th scope="col" className="py-2.5 pl-6 font-medium">{l("tierCol")}</th>
+                    <th scope="col" className="px-3 py-2.5 font-medium">{l("rateCol")}</th>
+                    <th scope="col" className="px-3 py-2.5 font-medium">{l("reachCol")}</th>
+                    <th scope="col" className="py-2.5 pr-6 pl-3 text-right font-medium">{l("per1000")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TIER_RULES.map((r) => (
+                    <tr key={r.tier} className="border-b border-line last:border-0">
+                      <td className="py-3 pl-6 font-medium">{r.label}</td>
+                      <td className="tabular px-3 py-3">{r.rate} {l("rateUnit")}</td>
+                      <td className="tabular px-3 py-3 text-content-secondary">
+                        {r.minSpend === 0 ? l("starter") : `${l("from")} ฿${num(r.minSpend)}`}
+                      </td>
+                      <td className="tabular py-3 pr-6 pl-3 text-right font-semibold">
+                        {num(pointsFor(1000, r.tier))} {l("pointsUnit")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul className="flex flex-col gap-3 border-t border-line px-6 py-5 text-sm leading-[1.55] text-content-secondary lg:border-t-0 lg:border-l">
+              {(["ruleEarn", "ruleWait", "ruleExpire", "ruleTier"] as const).map((k) => (
+                <li key={k} className="flex gap-2.5">
+                  <CheckCircle size={18} aria-hidden className="mt-0.5 shrink-0 text-crm" />
+                  {l(k)}
+                </li>
+              ))}
+            </ul>
           </div>
         </Card>
       </div>
@@ -568,6 +656,7 @@ export function LoyaltyPanel() {
 
 export function CampaignsPanel() {
   const { l, tx, num, date } = useCopy()
+  const campaigns = useCampaigns()
   return (
     <>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -589,13 +678,17 @@ export function CampaignsPanel() {
               </thead>
               <tbody>
                 {campaigns.map((cp) => (
-                  <tr key={cp.id} className="border-b border-line last:border-0">
+                  <tr key={cp.id} className="group relative border-b border-line last:border-0 hover:bg-raised">
                     <td className="py-3 pl-6">
                       <span className="tabular inline-flex h-7 min-w-9 items-center justify-center rounded-full bg-oms-soft px-2 text-xs font-semibold text-oms-on-soft">
                         P{cp.priority}
                       </span>
                     </td>
-                    <td className="px-3 py-3 font-medium">{tx(cp.name)}</td>
+                    <td className="px-3 py-3 font-medium">
+                      <Link href={`/campaigns/${cp.id}`} className="group-hover:text-crm after:absolute after:inset-0">
+                        {tx(cp.name)}
+                      </Link>
+                    </td>
                     <td className="px-3 py-3 whitespace-nowrap text-content-secondary">
                       {date(cp.start)} – {date(cp.end)}
                     </td>
@@ -643,10 +736,11 @@ export function CampaignsPanel() {
 
 /* --------------------------------------------------------- 7. Trends */
 
-export function TrendsPanel({ range }: { range: Range }) {
+export function TrendsPanel() {
   const { l, num, money, lang } = useCopy()
+  const { range } = useRange()
   const list = series(range)
-  const weekly = range === "90d"
+  const weekly = isWeekly(range)
   const locale = lang === "th" ? "th-TH" : "en-GB"
   const fmtX = (x: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(`${x}T00:00:00Z`))
@@ -802,8 +896,8 @@ export function Dashboard() {
   return (
     <div className="flex flex-col gap-10">
       <TasksSection />
-      <TodaySection />
-      <AlertsSection />
+      <PulseSection />
+      <SalesSection />
     </div>
   )
 }
