@@ -7,7 +7,7 @@
 /* RELIO Design System v2.0 — tokens from RELIO-DESIGN.md §18.1 / §11 */
 
 @theme inline {
-  --font-sans: var(--font-bai-jamjuree), "Noto Sans Thai", Arial, ui-sans-serif,
+  --font-sans: var(--font-noto-thai), "Noto Sans Thai", Arial, ui-sans-serif,
     system-ui, sans-serif;
   --font-heading: var(--font-sans);
 
@@ -29,6 +29,8 @@
   --color-oms: var(--brand-oms-text);
   --color-oms-soft: var(--oms-badge-bg);
   --color-oms-on-soft: var(--oms-badge-text);
+  --color-brand-from: var(--brand-gradient-from);
+  --color-brand-to: var(--brand-gradient-to);
   --color-action: var(--action-primary-bg);
   --color-action-hover: var(--action-primary-hover);
   --color-action-active: var(--action-primary-active);
@@ -104,6 +106,9 @@
   --crm-badge-text: #076f7a;
   --oms-badge-bg: #e1ecff;
   --oms-badge-text: #1463d6;
+  /* Brand radial gradient (Figma: E1ECFF @22% -> 1463D6 @100%) */
+  --brand-gradient-from: #e1ecff;
+  --brand-gradient-to: #1463d6;
   --success-bg: #ddf5e8;
   --success-text: #18734a;
   --warning-bg: #fff0d0;
@@ -145,6 +150,8 @@
   --crm-badge-text: #5edae0;
   --oms-badge-bg: #162d50;
   --oms-badge-text: #75a7ff;
+  --brand-gradient-from: #1b3561;
+  --brand-gradient-to: #0d3f8f;
   --success-bg: #173526;
   --success-text: #75d9a2;
   --warning-bg: #3d2d16;
@@ -212,9 +219,80 @@
     stroke-dashoffset: 1;
   }
 }
+@keyframes portal-float {
+  50% {
+    transform: translateY(-10px);
+  }
+}
 
 :root {
   --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Portal backdrop: the login illustration's blue and grid; the menu sits on
+   it and the content floats on top as a white rounded panel. */
+.portal-backdrop {
+  background: radial-gradient(120% 90% at 50% 0%, #2f6ee0 0%, #1d59cc 50%, #1546ad 100%);
+}
+.portal-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(90% 80% at 50% 40%, black, transparent);
+}
+.dark .portal-backdrop {
+  background: radial-gradient(120% 90% at 50% 0%, #1f4fa8 0%, #173e8a 45%, #0e2c66 100%);
+}
+.dark .portal-backdrop::before {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+}
+
+/* Sidebar panel: same blue as the login illustration. */
+.portal-sidebar {
+  background: radial-gradient(140% 70% at 50% 0%, #2f6ee0 0%, #1d59cc 50%, #1546ad 100%);
+  box-shadow: 0 20px 40px -16px rgb(20 80 204 / 0.45);
+}
+.dark .portal-sidebar {
+  background: radial-gradient(140% 70% at 50% 0%, #1f4fa8 0%, #173e8a 45%, #0e2c66 100%);
+  box-shadow: 0 20px 40px -16px rgb(0 0 0 / 0.6);
+}
+
+/* Sidebar scrollbar: thin white pill on the blue, clearer while the menu is
+   hovered. Chrome/Safari/Edge use the ::-webkit-scrollbar rules; Firefox
+   (no ::-webkit-scrollbar) falls back to the standard properties. */
+.portal-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.portal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 8px;
+}
+.portal-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18) padding-box;
+}
+.portal-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: rgb(255 255 255 / 0.35);
+}
+.portal-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(255 255 255 / 0.55);
+}
+.portal-scroll::-webkit-scrollbar-thumb:active {
+  background-color: rgb(255 255 255 / 0.7);
+}
+@supports not selector(::-webkit-scrollbar) {
+  .portal-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.3) transparent;
+  }
 }
 
 /* Page enter: each top-level block rises in, one after another. */
@@ -423,4 +501,21 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+}
+
+/* Brand radial gradient + grid overlay, shared by the login hero and the
+   dashboard. Light centre sits at the top-left so dark text stays readable. */
+@utility bg-brand-radial {
+  background-image: radial-gradient(
+    140% 170% at 0% 0%,
+    var(--brand-gradient-from) 22%,
+    var(--brand-gradient-to) 100%
+  );
+}
+@utility bg-brand-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.35) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(90% 90% at 70% 30%, black, transparent);
 }

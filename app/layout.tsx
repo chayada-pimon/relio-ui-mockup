@@ -1,21 +1,21 @@
 import type { Metadata } from "next"
-import { Bai_Jamjuree } from "next/font/google"
+import { Noto_Sans_Thai } from "next/font/google"
 import Script from "next/script"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { LangProvider } from "@/lib/relio/i18n"
+import { PortalProvider } from "@/lib/portal/store"
 import { cn } from "@/lib/utils"
 
-const baiJamjuree = Bai_Jamjuree({
+const notoSansThai = Noto_Sans_Thai({
   subsets: ["thai", "latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-bai-jamjuree",
+  variable: "--font-noto-thai",
 })
 
 export const metadata: Metadata = {
-  title: "RELIO — Customers + Orders, Connected.",
-  description: "RELIO CRM + OMS prototype",
+  title: "CRM Center",
+  description: "CRM Center Admin Portal (mockup)",
 }
 
 export default function RootLayout({
@@ -27,11 +27,11 @@ export default function RootLayout({
     <html
       lang="th"
       suppressHydrationWarning
-      className={cn("antialiased", baiJamjuree.variable)}
+      className={cn("antialiased", notoSansThai.variable)}
     >
       <body>
         <ThemeProvider>
-          <LangProvider>{children}</LangProvider>
+          <PortalProvider>{children}</PortalProvider>
         </ThemeProvider>
         {process.env.NODE_ENV === "development" && (
           <Script
